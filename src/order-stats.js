@@ -1,4 +1,5 @@
 import { $, download, esc } from './dom.js';
+import { cupSizeLabels, orderItemName } from './menu.js';
 
 const csvCell = value => '"' + String(value ?? '').replaceAll('"', '""') + '"';
 
@@ -12,17 +13,17 @@ export function setupOrderStats(state, persist) {
     const grouped = new Map();
     for (const order of state.orders) {
       for (const item of order.items) {
-        const key = item.name + '|' + item.price;
-        const group = grouped.get(key) || { name: item.name, price: item.price, qty: 0 };
+        const key = JSON.stringify([item.name, item.size ?? '', item.price]);
+        const group = grouped.get(key) || { ...item, qty: 0 };
         group.qty += item.qty;
         grouped.set(key, group);
       }
     }
     $('#summary').innerHTML = [...grouped.values()].map(item => `<div class="line">
-      ${esc(item.name)} × ${item.qty}<strong>$${item.price * item.qty}</strong></div>`).join('') || '<p>尚無訂單</p>';
+      ${esc(orderItemName(item))} × ${item.qty}<strong>$${item.price * item.qty}</strong></div>`).join('') || '<p>尚無訂單</p>';
     $('#order-list').innerHTML = state.orders.map(order => `<div class="order">
       <strong>${esc(order.name)} <span>$${order.total}</span></strong>
-      <p>${order.items.map(item => esc(item.name) + ' × ' + item.qty).join('、')}</p>
+      <p>${order.items.map(item => esc(orderItemName(item)) + ' × ' + item.qty).join('、')}</p>
       ${order.note ? `<small>備註：${esc(order.note)}</small>` : ''}</div>`).join('') || '<p>尚無訂單</p>';
   }
 
@@ -33,11 +34,11 @@ export function setupOrderStats(state, persist) {
     render();
   };
   $('#orders-csv').onclick = () => {
-    const rows = [['時間', '店家', '姓名', '餐點', '單價', '數量', '小計', '備註']];
+    const rows = [['時間', '店家', '姓名', '餐點', '單價', '數量', '小計', '備註', '杯型']];
     for (const order of state.orders) {
       for (const item of order.items) {
         rows.push([order.createdAt, order.shop, order.name, item.name, item.price,
-          item.qty, item.price * item.qty, order.note]);
+          item.qty, item.price * item.qty, order.note, Object.hasOwn(cupSizeLabels, item.size) ? item.size : '']);
       }
     }
     download('orders.csv', '\uFEFF' + rows.map(row => row.map(csvCell).join(',')).join('\r\n'),

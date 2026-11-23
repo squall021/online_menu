@@ -29,7 +29,7 @@ function candidate(name, rows, prices) {
   const confidence = Math.min(...rows.map(row => row.score));
   const pending = prices.length !== 1 || !Number.isFinite(confidence) || confidence < 0.8;
   let optionHint = '';
-  if (prices.length > 1) optionHint = '偵測到多個價格，請確認尺寸後分列，或為此列指定單一尺寸與價格。';
+  if (prices.length > 1) optionHint = '偵測到多個價格，請依原圖核對杯型和各自價格。';
   else if (!prices.length) optionHint = '價格字元相連或無法讀取，請依原圖填寫。';
   else if (pending) optionHint = '品名或價格的 OCR 信心偏低，請依原圖填寫價格。';
 

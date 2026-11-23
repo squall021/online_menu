@@ -1,26 +1,50 @@
 import { $, download, esc, uid } from './dom.js';
-import { createProduct, isValidProduct, normalizePrice, normalizeProduct } from './menu.js';
+import {
+  createProduct, cupPrices, cupSizeLabels, hasValidPrices, isValidProduct, normalizePrice,
+  normalizeProduct, setCupPrice,
+} from './menu.js';
+
+function priceField(id, label, price, size = '') {
+  const inputId = `price-${esc(id)}-${size || 'single'}`;
+  return `<div><label for="${inputId}">${label}</label>
+    <input id="${inputId}" data-k="${size ? 'cupPrice' : 'price'}" data-size="${size}"
+      type="number" inputmode="numeric" min="1" step="1" value="${esc(price)}" placeholder="待確認"></div>`;
+}
+
+function renderPricing(product) {
+  const id = esc(product.id);
+  const sized = product.priceMode === 'sizes';
+  const priceEvidence = Array.isArray(product.priceCandidates)
+    ? product.priceCandidates.filter(entry => Number.isFinite(entry?.price))
+      .map(({ label, price }) => label ? `${label} ${price}` : String(price)).join(' / ')
+    : '';
+  return `<td class="price-editor">
+    <label for="pricing-${id}">計價方式</label>
+    <select id="pricing-${id}" data-k="priceMode">
+      <option value="single" ${sized ? '' : 'selected'}>單一價格</option>
+      <option value="sizes" ${sized ? 'selected' : ''}>中杯 M／大杯 L</option>
+    </select>
+    <div data-pricing="single" ${sized ? 'hidden' : ''}>${priceField(product.id, '價格', product.price)}</div>
+    <div data-pricing="sizes" ${sized ? '' : 'hidden'}>
+      ${cupPrices(product).map(({ size, price }) => priceField(product.id, cupSizeLabels[size], price, size)).join('')}
+    </div>
+    <small class="warn pending-price">${hasValidPrices(product) ? '' : '待確認'}</small>
+    ${priceEvidence ? `<small>OCR 價格 ${esc(priceEvidence)}</small>` : ''}
+  </td>`;
+}
 
 export function setupMenuEditor(state, persist, openForm) {
   function render() {
     $('#nProducts').textContent = state.products.length;
-    $('#products').innerHTML = state.products.map(product => {
-      const priceEvidence = Array.isArray(product.priceCandidates)
-        ? product.priceCandidates.filter(entry => Number.isFinite(entry?.price))
-          .map(({ label, price }) => label ? `${label} ${price}` : String(price)).join(' / ')
-        : '';
-      return `<tr data-id="${esc(product.id)}">
+    $('#products').innerHTML = state.products.map(product => `<tr data-id="${esc(product.id)}">
         <td><input data-k="name" value="${esc(product.name)}" aria-label="品名">
           ${product.optionHint ? `<small class="warn">${esc(product.optionHint)}</small>` : ''}</td>
-        <td><input data-k="price" type="number" min="1" step="1" value="${esc(product.price)}" placeholder="待確認" aria-label="價格" style="width:94px">
-          <small class="warn pending-price">${product.price == null ? '待確認' : ''}</small>
-          ${priceEvidence ? `<small>OCR 價格 ${esc(priceEvidence)}</small>` : ''}</td>
+        ${renderPricing(product)}
         <td><input data-k="category" value="${esc(product.category)}" aria-label="分類" style="width:115px"></td>
         <td><label class="inline"><input type="checkbox" data-k="reviewed" ${product.reviewed ? 'checked' : ''}> 已確認</label>
           <small>${esc(product.source || '手動輸入')}</small></td>
         <td><button class="danger" data-delete="${esc(product.id)}">刪除</button></td>
-      </tr>`;
-    }).join('') || '<tr><td colspan="5">目前沒有商品，請先 OCR 辨識或手動新增。</td></tr>';
+      </tr>`).join('') || '<tr><td colspan="5">目前沒有商品，請先 OCR 辨識或手動新增。</td></tr>';
   }
 
   $('#shop').value = state.shop;
@@ -36,12 +60,21 @@ export function setupMenuEditor(state, persist, openForm) {
     if (!row || !key) return;
     const product = state.products.find(item => item.id === row.dataset.id);
     if (key === 'reviewed') {
-      product.reviewed = input.checked && isValidProduct(product);
+      const confirmed = input.checked;
+      product.reviewed = confirmed && isValidProduct(product);
       input.checked = product.reviewed;
-      if (!product.reviewed && !isValidProduct(product)) alert('請先確認品名並填寫有效的單一價格。');
+      if (confirmed && !product.reviewed) {
+        alert('請先確認品名，並填寫所選計價方式的所有價格。');
+      }
     } else {
-      product[key] = key === 'price' ? normalizePrice(input.value) : input.value;
-      if (key === 'price') row.querySelector('.pending-price').textContent = product.price == null ? '待確認' : '';
+      if (key === 'cupPrice') setCupPrice(product, input.dataset.size, normalizePrice(input.value));
+      else product[key] = key === 'price' ? normalizePrice(input.value) : input.value;
+      if (key === 'priceMode') {
+        for (const fields of row.querySelectorAll('[data-pricing]')) {
+          fields.hidden = fields.dataset.pricing !== product.priceMode;
+        }
+      }
+      row.querySelector('.pending-price').textContent = hasValidPrices(product) ? '' : '待確認';
       product.reviewed = false;
       row.querySelector('[data-k="reviewed"]').checked = false;
     }
