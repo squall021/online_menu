@@ -34,6 +34,19 @@ function renderPricing(product) {
 }
 
 export function setupMenuEditor(state, persist, openForm) {
+  const confirmReady = $('#confirm-ready');
+  const progress = $('#review-progress');
+  const canConfirm = product => !product.reviewed && isValidProduct(product);
+
+  function renderReviewProgress() {
+    const confirmed = state.products.filter(product => product.reviewed).length;
+    const incomplete = state.products.filter(product => !isValidProduct(product)).length;
+    const remaining = incomplete ? `，${incomplete} 筆待補品名或價格` : '';
+    const message = `已確認 ${confirmed}／${state.products.length} 筆${remaining}。`;
+    if (progress.textContent !== message) progress.textContent = message;
+    confirmReady.setAttribute('aria-disabled', String(!state.products.some(canConfirm)));
+  }
+
   function render() {
     $('#nProducts').textContent = state.products.length;
     $('#products').innerHTML = state.products.map(product => `<tr data-id="${esc(product.id)}">
@@ -45,7 +58,16 @@ export function setupMenuEditor(state, persist, openForm) {
           <small>${esc(product.source || '手動輸入')}</small></td>
         <td><button class="danger" data-delete="${esc(product.id)}">刪除</button></td>
       </tr>`).join('') || '<tr><td colspan="5">目前沒有商品，請先 OCR 辨識或手動新增。</td></tr>';
+    renderReviewProgress();
   }
+
+  confirmReady.onclick = () => {
+    const ready = state.products.filter(canConfirm);
+    if (!ready.length) return;
+    for (const product of ready) product.reviewed = true;
+    persist();
+    render();
+  };
 
   $('#shop').value = state.shop;
   $('#shop').oninput = event => {
@@ -79,6 +101,7 @@ export function setupMenuEditor(state, persist, openForm) {
       row.querySelector('[data-k="reviewed"]').checked = false;
     }
     persist();
+    renderReviewProgress();
   };
   $('#products').onclick = event => {
     const button = event.target.closest('[data-delete]');
