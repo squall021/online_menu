@@ -1,11 +1,15 @@
 import { createProduct } from './menu.js';
 
 const amount = '[1-9][0-9]{1,2}';
+const checkbox = '[□☐▢◻]';
 const labeledPrices = new RegExp(`^(?:\\(M\\)|M)\\s*(${amount})\\s*(?:\\(L\\)|L)\\s*(${amount})$`, 'i');
 const numericPrices = new RegExp(`^(${amount})(?:\\s+(${amount}))?$`);
+const markedPrice = new RegExp(`^\\$\\s*(${amount})(?:\\s*${checkbox}[^0-9$+]{0,20})?$`, 'u');
+const leadingSurcharge = new RegExp(`^[^$+]{1,25}\\+\\s*\\$?\\s*[1-9][0-9]{0,2}\\s*${checkbox}\\s*(?=\\$)`, 'u');
+const inlineMarkedPrice = /^(.+?)\s*(\$.*)$/u;
 const inlinePrice = new RegExp(`^(.+?)\\s+[.$]?\\s*(${amount}(?:\\s+${amount})?)$`);
 const excluded = /^(?:找好茶|找奶茶|找拿鐵|找新鮮|找新鲜|季節限定|加料|冰量|甜度|正常|少冰|微冰|去冰|熱飲|溫熱飲|無糖|全糖|半糖|少糖|微糖|微微糖|\(|備註)/;
-const stripMarker = text => text.replace(/^[\s★☆*＊✱]+/u, '').trim();
+const stripMarker = text => text.replace(/^[\s★☆*＊✱]+|[\s□☐▢◻]+$/gu, '').trim();
 const sameRow = (a, b) => Math.abs(a.cy - b.cy) <= Math.min(8, Math.min(a.h, b.h) * 0.45);
 const byPosition = (a, b) => a.cy - b.cy || a.x - b.x;
 
@@ -14,6 +18,9 @@ function readPrices(text) {
   if (explicit) return [
     { label: 'M', price: Number(explicit[1]) }, { label: 'L', price: Number(explicit[2]) },
   ];
+  // A checkbox can separate an optional surcharge from a product's marked base price.
+  const marked = text.replace(leadingSurcharge, '').match(markedPrice);
+  if (marked) return [{ price: Number(marked[1]) }];
   const numeric = text.match(numericPrices);
   return numeric ? numeric.slice(1).filter(Boolean).map(value => ({ price: Number(value) })) : [];
 }
@@ -63,9 +70,9 @@ export function parseProducts(lines) {
     // NFKC joins full-width price punctuation without modifying the original OCR export.
     const normalized = row.text.normalize('NFKC');
     const sizeAt = normalized.search(/\(M\)/i);
-    const match = sizeAt < 0 ? normalized.match(inlinePrice)
+    const match = sizeAt < 0 ? normalized.match(inlineMarkedPrice) ?? normalized.match(inlinePrice)
       : [normalized, normalized.slice(0, sizeAt), normalized.slice(sizeAt)];
-    if (!match) continue;
+    if (!match || /\+\s*$/u.test(match[1])) continue;
     const name = productName(match[1]);
     const prices = readPrices(match[2].trim());
     if (!name || !prices.length) continue;
