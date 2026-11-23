@@ -13,7 +13,10 @@
 | 錯誤與重試 | 通過 | 模擬阻擋模型網域時顯示失敗，解析和匯出停用。恢復網路後以檔案上傳先喝道原圖，重試成功並產生 49 筆候選。 |
 | 校對、點餐與統計 | 通過 | 待確認價格、未勾選及編輯後失效的商品會擋下點餐。可新增、確認、匯出和重新載入菜單，並匯入舊版單價及保留新規格資料。兩份各 65 元的測試餐點產生 130 元訂單，姓名與品項統計、CSV 及重載保留結果。 |
 | 390 CSS px 窄版 | 通過 | 修正前 OCR 頁寬達 518 px。修正後 OCR 空狀態、辨識表格、校對與點餐均維持 390 px，表格可在容器內捲動。 |
-| Safari、Firefox、實體手機、正式 GitHub Pages 網址 | 未執行 | 本輪環境使用 Windows 上的 Chrome、Edge，以及 Vite 的本機子路徑。 |
+| 正式 GitHub Pages 網址 | 通過 | 公開 HTTPS 站以 412 CSS px 的手機模擬執行兩張菜單，分別取得 169 與 279 段文字。 |
+| Safari、Firefox、實體手機 | 未執行 | 公開站的手機畫面由 Windows 上的 Chrome 模擬。 |
+
+GitHub Pages 的兩張範例圖片與 WASM 回應 HTTP 200，WASM 的 MIME 類型為 `application/wasm`。兩個模型回應 HTTP 200，CORS 標頭允許 `https://squall021.github.io`。兩張菜單均可產生候選並下載原始辨識 JSON。 [測試站](https://squall021.github.io/online_menu/) · [首次部署紀錄](https://github.com/squall021/online_menu/actions/runs/45131306377)
 
 ### 原始失敗與修正
 

@@ -24,6 +24,7 @@
 - Node.js 26.13.0、npm 11.20.0、Vite 7.3.8。安裝、開發伺服器、根路徑建置及 `/menu-ocr-v1/` 建置皆通過。
 - PaddleOCR.js 0.4.2 與 ONNX Runtime Web 1.31.1 固定版本。原 Vite 開發模式的 WASM 請求會收到 HTML，現由 Vite 明確解析相符的 WASM 資產。
 - Chrome 與 Edge 實際辨識先喝道與 50嵐，分別輸出 169、279 段文字。逐項核對、原始 JSON、座標及價格錯誤例見 [OCR 測試報告](docs/OCR_TEST_REPORT.md)。
+- GitHub Pages 公開站以 412 CSS px 手機模擬完成兩張菜單 OCR，確認範例圖片、同源 WASM 與 Paddle 官方模型的 CORS。 [首次部署紀錄](https://github.com/squall021/online_menu/actions/runs/45131306377)
 - 點餐與訂單仍儲存在當前瀏覽器，正式共享訂單及管理權限尚待實作。
 
 ## 已知問題與接續順序
